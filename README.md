@@ -23,42 +23,42 @@ store, JWT login, and a React + TypeScript + MUI frontend.
 7) Sort by priority then by datetime
 8) Error handling
     - Login
-      - Wrong username/password => 401 with a clear "Invalid username or password" message
-      - Missing username/password => 400 
+      - Wrong username/password => 401 error with a clear "Invalid username or password" message
+      - Missing username/password => 400 error
       - The login form shows the message and keeps what the user typed
     - Creating / editing a task
-      - Empty or whitespace-only title => 400; the form also shows a "Title is required" error before submitting
+      - Empty or whitespace-only title => 400 error; the form also shows a "Title is required" error before submitting
       - "Set a due date" checked but no valid date entered => validation error
-      - Invalid / unparseable due date => 400
-      - Description longer than 1000 characters => 400
+      - Invalid due date => 400 error
+      - Description longer than 1000 characters => 400 error
       - Any server error is shown in the dialog and the user's input is preserved
     - Loading / updating / deleting
       - Failed load of the task list => error message with a Retry button
       - Failed complete/toggle or delete => error banner
-      - Updating or deleting a task that no longer exists => 404
+      - Updating or deleting a task that no longer exists => 404 error
     - Access / session
-      - Any request to a task endpoint without a valid token => 401
+      - Any request to a task endpoint without a valid token => 401 error
       - If the token expires or is rejected mid-session => the app logs out and returns to the login screen
 9) Test cases
     - Authentication
-      - Request to a task endpoint without a token is rejected (401)
-      - Login with a wrong password is rejected (401)
-      - Login with a missing username/password is rejected (400)
+      - Request to a task endpoint without a token is rejected (401 error)
+      - Login with a wrong password is rejected (401 error)
+      - Login with a missing username/password is rejected (400 error)
       - Login with correct credentials returns a token that grants access
     - Creating tasks
       - A valid task is created (201): title is trimmed, priority defaults to Medium, and it appears in the list
-      - An empty or whitespace-only title is rejected (400)
-      - An invalid due date is rejected (400)
+      - An empty or whitespace-only title is rejected (400 error)
+      - An invalid due date is rejected (400 error)
       - A missing due date is allowed (due date is optional)
     - Listing & sorting
       - Active tasks are ordered by priority (High to Low)
       - A completed task is hidden from the active list
     - Updating tasks
       - Edits are saved and persist (verified by re-fetching the task)
-      - Updating a task that does not exist returns 404
+      - Updating a task that does not exist returns 404 error
     - Deleting tasks
       - Deleting a task removes it (204) and it disappears from the list
-      - Deleting a task that does not exist returns 404
+      - Deleting a task that does not exist returns 404 error
 
 ## Assumptions
 - **Single user, single device.** The app is built for one person managing their own list. There is one login and no separation of data between users.
@@ -66,6 +66,12 @@ store, JWT login, and a React + TypeScript + MUI frontend.
 - **Small data volume.** A personal daily list is tens, maybe low hundreds, of active tasks, so the list endpoint returns everything in a single sorted query with no pagination.
 - **Low concurrency, local storage.** A file-based SQLite database is enough: there is effectively one writer (the single user) and no need for a networked database server.
 - **Due dates are optional and stored in UTC**, with the browser rendering the user's local time.
+
+## Authentication & ownership
+
+The single login (JWT) gates **every** task endpoint — an unauthenticated request is rejected. Because the app is single-user, there is no second user and no per-user data to isolate, so the "User A cannot access User B's data" check does not apply here and I left that for a future improvement.
+
+This is a deliberate, I made the login exists to gate access, and with one account there is no cross-user data that could leak. If this became multi-user, per-user ownership would be the first addition — a `UserId` on each task, read from the token's user claim and applied as a filter to every query (get/update/delete) would match on id and to that specific user.
 
 ## Ways to scale
 1. **Swap SQLite for a Cloud based DB like PostgreSQL** SQLite is ideal for a single local user but not for many concurrent writers or multiple servers sharing one store. With EF Core this is mostly a provider + connection-string change and sticking to a relational database would work well given the scope
